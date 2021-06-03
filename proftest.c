@@ -57,16 +57,26 @@ void work(int thread_count, int work_scale) {
 
   printf("thread_id,signals,cpu_seconds,hz\n");
   double sum_hz = 0;
+  double min_hz = 0;
+  double max_hz = 0;
   for (int i = 0; i < thread_count; i++) {
     assert(pthread_join(pthreads[i], NULL) == 0);
     double thread_hz = (double)threads[i].signals / (threads[i].time_sec);
     printf("%d,%d,%.3f,%.0f\n", i, threads[i].signals, threads[i].time_sec, thread_hz);
     sum_hz += thread_hz;
+    if (thread_hz > max_hz) {
+      max_hz = thread_hz;
+    }
+    if (thread_hz < min_hz || min_hz == 0) {
+      min_hz = thread_hz;
+    }
   }
 
   double avg_hz = sum_hz / thread_count;
   printf("\nprocess hz (total): %.f\n", sum_hz);
+  printf("thread hz (min): %.f\n", min_hz);
   printf("thread hz (avg): %.f\n", avg_hz);
+  printf("thread hz (max): %.f\n", max_hz);
 
   // A signal handler might still be running, so give it some time to complete.
   // TODO: Is there a way to properly deal with this race condition?
