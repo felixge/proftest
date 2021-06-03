@@ -65,7 +65,8 @@ void work(int thread_count, int work_scale) {
   }
 
   double avg_hz = sum_hz / thread_count;
-  printf("\navg hz: %.f", avg_hz);
+  printf("\nprocess hz (total): %.f\n", sum_hz);
+  printf("thread hz (avg): %.f\n", avg_hz);
 
   // A signal handler might still be running, so give it some time to complete.
   // TODO: Is there a way to properly deal with this race condition?
