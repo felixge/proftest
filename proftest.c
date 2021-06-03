@@ -61,7 +61,7 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
     threads[i].signals = 0;
     threads[i].timer_create = timer_create;
     threads[i].loops = 1e9 * work_scale;
-    int * thread_id = malloc(sizeof(thread_id));
+    int * thread_id = malloc(sizeof(* thread_id));
     assert(thread_id != NULL);
     *thread_id = i;
     assert(pthread_create(&pthreads[i], NULL, work_thread, (void *) thread_id) == 0);
