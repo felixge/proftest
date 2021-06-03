@@ -56,11 +56,18 @@ void work(int thread_count, int work_scale) {
   }
 
   printf("thread_id,signals,cpu_seconds,hz\n");
+  for (int i = 0; i < thread_count; i++) {
+    assert(pthread_join(pthreads[i], NULL) == 0);
+  }
+
+  // A signal handler might still be running, so give it 1ms to complete.
+  // TODO: Is there a way to properly deal with this race condition?
+  usleep(1000);
+
   double sum_hz = 0;
   double min_hz = 0;
   double max_hz = 0;
   for (int i = 0; i < thread_count; i++) {
-    assert(pthread_join(pthreads[i], NULL) == 0);
     double thread_hz = (double)threads[i].signals / (threads[i].time_sec);
     printf("%d,%d,%.3f,%.0f\n", i, threads[i].signals, threads[i].time_sec, thread_hz);
     sum_hz += thread_hz;
@@ -78,9 +85,6 @@ void work(int thread_count, int work_scale) {
   printf("thread hz (avg): %.f\n", avg_hz);
   printf("thread hz (max): %.f\n", max_hz);
 
-  // A signal handler might still be running, so give it some time to complete.
-  // TODO: Is there a way to properly deal with this race condition?
-  usleep(100);
   free(pthreads);
   free(threads);
 }
