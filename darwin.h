@@ -8,4 +8,10 @@ int logical_cpus() {
   assert(sysctlbyname("hw.logicalcpu", &count, &count_len, NULL, 0) == 0);
   return count;
 }
+
+bool has_timer_create = false;
+
+void setup_timer_create(int hz) {
+  assert(0); // not available on darwin
+}
 #endif

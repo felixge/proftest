@@ -1,3 +1,10 @@
+CC=gcc
+CCFLAGS=-lpthread
+ifeq ($(shell uname -s),Linux)
+	# needed for timer_create
+	CCFLAGS += -lrt
+endif
+
 .PHONY: proftest
 proftest:
-	gcc -Werror proftest.c -lpthread -o proftest
+	$(CC) -Werror proftest.c $(CCFLAGS) -o proftest
