@@ -7,15 +7,19 @@ Usage:
 
 ```
 make
+
 # test setitimer
 ./proftest -i
+
+# test timer_create
+./proftest -c
 ```
 
-Using docker (TODO: Fix these instructions):
+Using docker:
 
 ```
 docker build -t proftest .
-docker run --rm -it proftest bash
+docker run --rm -it proftest ./proftest -i
 ```
 
 ## Results
