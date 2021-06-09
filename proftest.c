@@ -15,13 +15,18 @@
 #include "darwin.h"
 #include "linux.h"
 
+const long work_scale_loops = 1e9;
+const long sig_scale_loops = 1e4;
+
 // thread local storage for our logical thread id, used by signal handlers
 __thread int thread_id;
 
 struct thread {
-  long loops; // amount of work this thread should do
+  long work_loops; // amount of work this thread should do
+  long sig_loops; // amount of work the signal handler for this thread should do
   int signals; // number of signals this thread received
   double time_sec; // CPU time this thread consumed
+  double sig_time_usec; // CPU time the signal handler for this thread consumed
 
   bool timer_create; // setup timer_create for this thread?
   int hz; // only relevant if timer_create is true
@@ -42,7 +47,7 @@ void *work_thread(void *arg) {
   struct timespec start_time;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_time);
   // do some "work"
-  for (long i = 0; i < cur_thread.loops; i++) {
+  for (long i = 0; i < cur_thread.work_loops; i++) {
     // intentionally left blank
   }
 
@@ -52,7 +57,7 @@ void *work_thread(void *arg) {
   return NULL;
 }
 
-void work(int thread_count, int work_scale, bool timer_create, int hz) {
+void work(int thread_count, int work_scale, int sig_work_scale, bool timer_create, int hz) {
   threads = malloc(thread_count * sizeof(struct thread));
   pthread_t * pthreads = malloc(thread_count * sizeof(pthread_t));
   assert(pthreads != NULL);
@@ -60,7 +65,8 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
     threads[i].hz = hz;
     threads[i].signals = 0;
     threads[i].timer_create = timer_create;
-    threads[i].loops = 1e9 * work_scale;
+    threads[i].work_loops = work_scale_loops * work_scale;
+    threads[i].sig_loops = sig_scale_loops * sig_work_scale;
     int * thread_id = malloc(sizeof(* thread_id));
     assert(thread_id != NULL);
     *thread_id = i;
@@ -79,6 +85,7 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
   double sum_hz = 0;
   double min_hz = 0;
   double max_hz = 0;
+  double sig_time_usec = 0;
   for (int i = 0; i < thread_count; i++) {
     double thread_hz = (double)threads[i].signals / (threads[i].time_sec);
     printf("%d,%d,%.3f,%.0f\n", i, threads[i].signals, threads[i].time_sec, thread_hz);
@@ -89,6 +96,7 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
     if (thread_hz < min_hz || min_hz == 0) {
       min_hz = thread_hz;
     }
+    sig_time_usec += threads[i].sig_time_usec;
   }
 
   double avg_hz = sum_hz / thread_count;
@@ -96,6 +104,7 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
   printf("thread hz (min): %.f\n", min_hz);
   printf("thread hz (avg): %.f\n", avg_hz);
   printf("thread hz (max): %.f\n", max_hz);
+  printf("signal handler time usec (avg): %.f\n", sig_time_usec/thread_count);
 
   free(pthreads);
   free(threads);
@@ -103,7 +112,16 @@ void work(int thread_count, int work_scale, bool timer_create, int hz) {
 
 
 void signal_handler() {
+  struct timespec start_time;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start_time);
   threads[thread_id].signals++;
+
+  for (long i = 0; i < threads[thread_id].sig_loops; i++) {
+    // intentionally left blank
+  }
+  struct timespec end_time;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_time);
+  threads[thread_id].sig_time_usec = ((end_time.tv_sec - start_time.tv_sec) + ((double)end_time.tv_nsec - (double)start_time.tv_nsec) / 10e9)*1e6;
 }
 
 void setup_setitimer(int hz) {
@@ -136,11 +154,12 @@ int main(int argc, char *argv[]) {
   int threads = logical_cpus();
   int hz = 100;
   int work_scale = 1;
+  int sig_work_scale = 0;
   bool setitimer = false;
   bool timer_create = false;
 
   int opt;
-  while((opt = getopt(argc, argv, "hict:f:w:")) != -1) {
+  while((opt = getopt(argc, argv, "hict:f:w:s:")) != -1) {
     switch(opt) { 
       case 'h':
         printf(
@@ -151,12 +170,14 @@ int main(int argc, char *argv[]) {
           "  -i\tUse setitimer(2) for profiling (default: %d)\n"
           "  -c\tUse timer_create(2) for profiling (default: %d)\n"
           "  -f\tFrequency in hz for profiling (default: %d)\n"
-          "  -w\tAmount of work per thread given in billions of operations. (default: %d)\n",
+          "  -w\tAmount of work per thread (1e9 * scale) loops. (default: %d)\n"
+          "  -s\tAmount of work to perform in the signal handler (1e4 * scale) (default: %d)\n",
           threads,
           setitimer,
           timer_create,
           hz,
-          work_scale
+          work_scale,
+          sig_work_scale
         );
         return 0;
       case 't':
@@ -167,6 +188,9 @@ int main(int argc, char *argv[]) {
         break;
       case 'w':
         work_scale = atoi(optarg);
+        break;
+      case 's':
+        sig_work_scale = atoi(optarg);
         break;
       case 'i':
         setitimer = true;
@@ -182,7 +206,8 @@ int main(int argc, char *argv[]) {
 
   char * os = os_name();
   printf("threads: %d\n", threads);
-  printf("work: %d\n", work_scale);
+  printf("work_scale: %d\n", work_scale);
+  printf("sig_work_scale: %d\n", sig_work_scale);
   printf("setitimer: %d\n", setitimer);
   printf("timer_create: %d\n", timer_create);
   printf("hz: %d\n", hz);
@@ -199,5 +224,5 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  work(threads, work_scale, timer_create, hz);
+  work(threads, work_scale, sig_work_scale, timer_create, hz);
 }

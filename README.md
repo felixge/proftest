@@ -18,8 +18,8 @@ make
 Using docker:
 
 ```
-docker build -t proftest .
-docker run --rm -it proftest ./proftest -i
+./dev.bash
+make && perf stat -e 'signal:*' ./proftest -c
 ```
 
 ## Results
