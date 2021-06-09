@@ -15,9 +15,9 @@ void setup_timer_create(int hz) {
   struct sigevent sev;
 
   memset(&sev, 0, sizeof(sev));
-  sev.sigev_notify_thread_id = gettid();
   sev.sigev_notify = SIGEV_THREAD_ID;
   sev.sigev_signo = SIGPROF;
+  sev.sigev_notify_thread_id = gettid();
   sev.sigev_value.sival_ptr = &timerid;
   assert(timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &timerid) != -1);
 
