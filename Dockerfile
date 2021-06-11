@@ -6,7 +6,7 @@ WORKDIR /
 COPY --from=ksrc /kernel-dev.tar /
 RUN tar xf kernel-dev.tar && rm kernel-dev.tar
 
-RUN apt-get -y update && apt-get -y install build-essential time kmod linux-tools-common linux-tools-generic
+RUN apt-get -y update && apt-get -y install build-essential time kmod linux-tools-common linux-tools-generic bpftrace  bpfcc-tools
 RUN ln -s $(find /usr/lib -name 'perf' | head -n1) /usr/local/bin/perf
 #linux-tools-`uname -r`
 COPY . /proftest
