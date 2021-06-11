@@ -124,7 +124,7 @@ void signal_handler() {
   }
   struct timespec end_time;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_time);
-  double sig_time_usec = ((end_time.tv_sec - start_time.tv_sec) + ((double)end_time.tv_nsec - (double)start_time.tv_nsec) / 10e9)*1e6;;
+  double sig_time_usec = ((end_time.tv_sec - start_time.tv_sec) + ((double)end_time.tv_nsec - (double)start_time.tv_nsec) / 1e9)*1e6;;
   threads[thread_id].sig_time_usec += sig_time_usec;
 }
 
