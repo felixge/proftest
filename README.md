@@ -19,7 +19,7 @@ Using docker:
 
 ```
 ./dev.bash
-make && perf stat -e 'signal:*' ./proftest -c
+make && bpftrace -c './proftest -c' ./trace.bt
 ```
 
 ## Results

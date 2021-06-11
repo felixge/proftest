@@ -1,15 +1,21 @@
 #!/usr/bin/env bpftrace
 
 // Traces the duration of the signal_handler
+tracepoint:signal:signal_generate{
+  @signal["generate"] = count();
+}
+tracepoint:signal:signal_deliver{
+  @signal["deliver"] = count();
+}
 
 uprobe:./proftest:signal_handler {
-	@start[tid] = nsecs;
+  @start[tid] = nsecs;
 }
 
 uretprobe:./proftest:signal_handler {
   $usec = (nsecs - @start[tid]) / 1000;
-  @usecs = hist($usec);
-  @avg_usec = avg($usec);
+  @signal_handler_usecs = hist($usec);
+  @signal_handler_usecs_avg = avg($usec);
   delete(@start[tid]);
 }
 
