@@ -7,4 +7,4 @@ endif
 
 .PHONY: proftest
 proftest:
-	$(CC) -Werror proftest.c $(CCFLAGS) -o proftest
+	$(CC) -g -Werror proftest.c $(CCFLAGS) -o proftest
