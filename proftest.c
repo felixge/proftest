@@ -64,6 +64,7 @@ void work(int thread_count, int work_scale, int sig_work_scale, bool timer_creat
   for (int i = 0; i < thread_count; i++) {
     threads[i].hz = hz;
     threads[i].signals = 0;
+    threads[i].sig_time_usec = 0;
     threads[i].timer_create = timer_create;
     threads[i].work_loops = work_scale_loops * work_scale;
     threads[i].sig_loops = sig_scale_loops * sig_work_scale;
@@ -85,7 +86,8 @@ void work(int thread_count, int work_scale, int sig_work_scale, bool timer_creat
   double sum_hz = 0;
   double min_hz = 0;
   double max_hz = 0;
-  double sig_time_usec = 0;
+  double sum_sig_time_usec = 0;
+  double sum_signals = 0;
   for (int i = 0; i < thread_count; i++) {
     double thread_hz = (double)threads[i].signals / (threads[i].time_sec);
     printf("%d,%d,%.3f,%.0f\n", i, threads[i].signals, threads[i].time_sec, thread_hz);
@@ -96,7 +98,8 @@ void work(int thread_count, int work_scale, int sig_work_scale, bool timer_creat
     if (thread_hz < min_hz || min_hz == 0) {
       min_hz = thread_hz;
     }
-    sig_time_usec += threads[i].sig_time_usec;
+    sum_sig_time_usec += threads[i].sig_time_usec;
+    sum_signals += threads[i].signals;
   }
 
   double avg_hz = sum_hz / thread_count;
@@ -104,7 +107,7 @@ void work(int thread_count, int work_scale, int sig_work_scale, bool timer_creat
   printf("thread hz (min): %.f\n", min_hz);
   printf("thread hz (avg): %.f\n", avg_hz);
   printf("thread hz (max): %.f\n", max_hz);
-  printf("signal handler time usec (avg): %.f\n", sig_time_usec/thread_count);
+  printf("signal handler time usec (avg): %.f\n", sum_sig_time_usec/sum_signals);
 
   free(pthreads);
   free(threads);
@@ -121,7 +124,8 @@ void signal_handler() {
   }
   struct timespec end_time;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_time);
-  threads[thread_id].sig_time_usec = ((end_time.tv_sec - start_time.tv_sec) + ((double)end_time.tv_nsec - (double)start_time.tv_nsec) / 10e9)*1e6;
+  double sig_time_usec = ((end_time.tv_sec - start_time.tv_sec) + ((double)end_time.tv_nsec - (double)start_time.tv_nsec) / 10e9)*1e6;;
+  threads[thread_id].sig_time_usec += sig_time_usec;
 }
 
 void setup_setitimer(int hz) {
