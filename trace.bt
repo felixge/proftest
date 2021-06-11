@@ -1,0 +1,18 @@
+#!/usr/bin/env bpftrace
+
+// Traces the duration of the signal_handler
+
+uprobe:./proftest:signal_handler {
+	@start[tid] = nsecs;
+}
+
+uretprobe:./proftest:signal_handler {
+  $usec = (nsecs - @start[tid]) / 1000;
+  @usecs = hist($usec);
+  @avg_usec = avg($usec);
+  delete(@start[tid]);
+}
+
+END {
+  clear(@start);
+}
